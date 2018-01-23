@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>FromTo</title>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial
+        }
+
+        #container{
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        #panel {
+            width: 30em;
+            padding: 20px;
+        }
+
+        .boxes{
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .txtbox{
+            width: 100%;
+            border: 0px;
+            border-bottom: 1px solid #CCC;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            margin-top: 20px;
+        }
+
+        .btnCalc{
+            width: 100%;
+            height: 40px;
+            background-color: #2196F3;
+            color: #FFF;
+            font-size: 12pt;
+            border: 0px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        #result{
+            background-color: #F5F5F5;
+            padding: 10px;
+            display: none;
+        }
+
+        .route{
+            border-bottom: 1px solid #CCC;
+            padding-bottom: 15px;
+        }
+
+        .titleRoute{
+            font-weight: bold;
+        }
+
+        .info{
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+
+
+<div id="container">
+
+    <div id="panel">
+        <div class="boxes">
+            <p class="title">Calcular rotas:</p>
+            <input type="text" class="txtbox" id="from" placeholder="Origem" />
+            <input type="text" class="txtbox" id="to" placeholder="Destino" />
+        </div>
+        <button type="button" id="calcRoute" class="btnCalc">Calcular</button>
+        <div id="infoFrom" class="info"></div>
+        <div id="infoTo" class="info"></div>
+        <div id="result"></div>
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E="
+        crossorigin="anonymous"></script>
+
+<script>
+    function initMap() {
+        var directionsService = new google.maps.DirectionsService;
+        var directionsDisplay = new google.maps.DirectionsRenderer;
+
+        var autocompleteFrom = new google.maps.places.Autocomplete(document.getElementById('from'));
+        var autocompleteTo = new google.maps.places.Autocomplete(document.getElementById('to'));
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 10,
+            center: {lat: -19.9178164, lng: -44.1003992}
+        });
+
+        directionsDisplay.setMap(map);
+
+        autocompleteFrom.addListener('place_changed', function() {
+            fillInfo(autocompleteFrom, $("#infoFrom"));
+        });
+
+        autocompleteTo.addListener('place_changed', function() {
+            fillInfo(autocompleteTo, $("#infoTo"));
+        });
+
+        $('#calcRoute').click(function(){
+
+            var from = $('#from').val();
+            var to = $('#to').val();
+
+            if(from == '' || to == '')
+                alert('Informe uma origem e destino!');
+
+            else{
+                directionsService.route({
+                    origin: from,
+                    destination: to,
+                    provideRouteAlternatives: true,
+                    travelMode: 'DRIVING'
+                }, function(response, status) {
+                    if (status === 'OK') {
+                        directionsDisplay.setDirections(response);
+
+                        $("#result").css('display', 'block');
+                        $("#result").html('');
+
+                        $.each(response.routes, function(key, value){
+                            var leg = value.legs[0];
+                            var item = $('<div class="route"><p class="titleRoute">Rota '+(key+1)+') ' + value.summary + '</p>Distância: ' + leg.distance.text + ' / Tempo: '+ leg.duration.text +'</div>');
+
+                            $("#result").append(item);
+                        });
+
+                    } else {
+                        window.alert('Directions request failed due to ' + status);
+                    }
+                });
+            }
+        });
+    }
+
+    function fillInfo(autocomplete, obj) {
+        var place = autocomplete.getPlace();
+        var city = '';
+        var uf = '';
+
+        $.each(place.address_components, function(i, component){
+            $.each(component.types, function (i, type) {
+                if(city == '' && type == 'administrative_area_level_2')
+                    city = component.short_name;
+
+                if(uf == '' && type == 'administrative_area_level_1')
+                    uf = component.short_name;
+            });
+        });
+
+        obj.html($('<p><strong>De: ' + city + '/' + uf + '</strong><br />(' + place.geometry.location.lat() +', ' + place.geometry.location.lng() +')</p>'));
+    }
+
+</script>
+
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?libraries=places&callback=initMap">
+</script>
+</body>
+</html>
